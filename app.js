@@ -10,6 +10,26 @@
   const today = () => C.ymd(new Date());
   const monthName = (key) => { const [y, m] = key.split('-'); return y + '年' + Number(m) + '月'; };
 
+  // 画面の色（推しカラー）。[id, 名前, 見本の色]
+  const THEMES = [
+    ['purple', '紫', '#6a4bc4'], ['pink', 'ピンク', '#d6336c'], ['red', '赤', '#d62839'], ['orange', 'オレンジ', '#e8590c'],
+    ['yellow', '黄', '#f5c400'], ['green', '緑', '#2b9348'], ['sky', '水色', '#1c9fd6'], ['blue', '青', '#2f5bd3'],
+  ];
+  const MODES = [['light', '明るい'], ['dark', '暗い'], ['auto', '自動']];
+  const LOOK_KEY = 'oshi-note-look';
+  function getLook() {
+    const h = document.documentElement.dataset;
+    return { theme: h.theme || 'purple', mode: h.mode || 'light' };
+  }
+  function setLook(patch) {
+    const look = Object.assign(getLook(), patch);
+    document.documentElement.dataset.theme = look.theme;
+    document.documentElement.dataset.mode = look.mode;
+    const t = THEMES.find((x) => x[0] === look.theme);
+    document.querySelector('meta[name=theme-color]').content = t ? t[2] : '#6a4bc4';
+    try { localStorage.setItem(LOOK_KEY, JSON.stringify(look)); } catch (e) { /* 保存できなくても今回は反映 */ }
+  }
+
   const defaults = () => ({ events: [], expenses: [], oshis: [], budget: 0, lastOshi: '' });
   let state = load();
   let eventsTab = 'open';
@@ -149,7 +169,14 @@
     settings: {
       title: '設定',
       html() {
+        const look = getLook();
         return `
+          <div class="card"><h2>画面の色</h2>
+            <p class="muted" style="margin:0 0 10px">推しのメンバーカラーにしてもええで</p>
+            <div class="swatches">${THEMES.map((t) => `<button data-act="theme" data-v="${t[0]}" class="${look.theme === t[0] ? 'on' : ''}"><i style="background:${t[2]}"></i>${t[1]}</button>`).join('')}</div>
+            <div class="seg" style="margin:0">${MODES.map((m) => `<button data-act="mode" data-v="${m[0]}" class="${look.mode === m[0] ? 'on' : ''}">${m[1]}</button>`).join('')}</div>
+            <p class="muted" style="margin:6px 0 0">「自動」はiPhoneのダークモード設定に合わせる</p>
+          </div>
           <div class="card"><h2>月の予算</h2>
             <label class="f"><span>1か月に推し活で使っていい金額（0で予算なし）</span>
               <input id="budget" class="yen" inputmode="numeric" value="${state.budget || ''}" placeholder="例：30000"></label>
@@ -376,6 +403,8 @@
     else if (act === 'expense') { const ex = find(state.expenses); if (ex) expenseForm(ex); }
     else if (act === 'events-tab') { eventsTab = el.dataset.tab; render(); }
     else if (act === 'month') { moneyMonth = C.shiftMonth(moneyMonth, Number(el.dataset.d)); render(); }
+    else if (act === 'theme') { setLook({ theme: el.dataset.v }); render(); }
+    else if (act === 'mode') { setLook({ mode: el.dataset.v }); render(); }
     else if (act === 'go-settings') location.hash = '#/settings';
     else if (act === 'save-budget') {
       const v = $('#budget').value.trim();
@@ -402,6 +431,7 @@
   window.addEventListener('hashchange', render);
   // 日付が変わったときや、アプリに戻ってきたときに「あと何日」を更新する
   document.addEventListener('visibilitychange', () => { if (!document.hidden && $('#sheet').hidden) render(); });
+  setLook({});
   render();
 
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

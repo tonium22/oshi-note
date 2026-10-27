@@ -1,36 +1,88 @@
+/* 色：テーマ（推しカラー）× 明るさ（明るい / 暗い / iPhoneに合わせる）。
+   テーマは --t-* を決めるだけ。実際に使う色は下の明るい・暗いの指定で選ぶ */
+:root, [data-theme="purple"] {
+  --t-main: #6a4bc4; --t-soft: #ece6fb; --t-bg: #f6f3fc; --t-line: #e4ddf2; --t-accent: #e0457b; --t-on: #fff;
+  --t-main-d: #a48cf0; --t-soft-d: #322d46; --t-bg-d: #1d1b26;
+}
+[data-theme="pink"] {
+  --t-main: #d6336c; --t-soft: #fde4ee; --t-bg: #fff4f8; --t-line: #f6d6e3; --t-accent: #7b5ce0; --t-on: #fff;
+  --t-main-d: #ff7fab; --t-soft-d: #452a38; --t-bg-d: #221a22;
+}
+[data-theme="red"] {
+  --t-main: #d62839; --t-soft: #fde2e4; --t-bg: #fff5f5; --t-line: #f5d5d8; --t-accent: #e8590c; --t-on: #fff;
+  --t-main-d: #ff7b86; --t-soft-d: #452930; --t-bg-d: #221a20;
+}
+[data-theme="orange"] {
+  --t-main: #e8590c; --t-soft: #ffe8d6; --t-bg: #fff8f1; --t-line: #f5dcc8; --t-accent: #d6336c; --t-on: #fff;
+  --t-main-d: #ffa060; --t-soft-d: #453129; --t-bg-d: #221c1e;
+}
+[data-theme="yellow"] {
+  --t-main: #e0a800; --t-soft: #fff3c4; --t-bg: #fffcef; --t-line: #f1e3b0; --t-accent: #e8590c; --t-on: #3a2a00;
+  --t-main-d: #ffd43b; --t-soft-d: #453b21; --t-bg-d: #221f1d;
+}
+[data-theme="green"] {
+  --t-main: #2b9348; --t-soft: #dff3e4; --t-bg: #f4fbf5; --t-line: #d2ead8; --t-accent: #e0457b; --t-on: #fff;
+  --t-main-d: #6fd38a; --t-soft-d: #283b31; --t-bg-d: #1a1e21;
+}
+[data-theme="sky"] {
+  --t-main: #1c9fd6; --t-soft: #dcf2fc; --t-bg: #f3fbff; --t-line: #cfe8f3; --t-accent: #e0457b; --t-on: #fff;
+  --t-main-d: #6cc8f0; --t-soft-d: #273946; --t-bg-d: #1a1e26;
+}
+[data-theme="blue"] {
+  --t-main: #2f5bd3; --t-soft: #e1e8fc; --t-bg: #f4f7ff; --t-line: #d6def3; --t-accent: #e0457b; --t-on: #fff;
+  --t-main-d: #8aa6ff; --t-soft-d: #2d3249; --t-bg-d: #1c1c26;
+}
+
 :root {
-  --bg: #f6f3fc;
+  --bg: var(--t-bg);
   --card: #ffffff;
   --text: #221a33;
   --sub: #6d6380;
-  --line: #e4ddf2;
-  --main: #6a4bc4;
-  --main-soft: #ece6fb;
-  --accent: #e0457b;
+  --line: var(--t-line);
+  --main: var(--t-main);
+  --main-soft: var(--t-soft);
+  --accent: var(--t-accent);
   --over: #d93a3a;
   --over-soft: #fde8e8;
   --soon: #c77700;
   --soon-soft: #fff1d9;
   --ok: #1f8a5b;
-  --on-main: #fff;
+  --on-main: var(--t-on);
   --shadow: 0 1px 3px rgba(40, 20, 80, .08);
 }
+:root[data-mode="dark"] {
+  --bg: var(--t-bg-d);
+  --card: #222029;
+  --text: #f2f0f7;
+  --sub: #a9a4b8;
+  --line: #36333f;
+  --main: var(--t-main-d);
+  --main-soft: var(--t-soft-d);
+  --accent: var(--t-accent);
+  --over: #ff6b6b;
+  --over-soft: #3d1f24;
+  --soon: #ffb547;
+  --soon-soft: #3a2c14;
+  --ok: #4cc98c;
+  --on-main: #16151b;
+  --shadow: none;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #15111f;
-    --card: #211b30;
-    --text: #f1ecfb;
-    --sub: #a89fbd;
-    --line: #342b48;
-    --main: #a48cf0;
-    --main-soft: #2e2547;
-    --accent: #ff6f9f;
+  :root[data-mode="auto"] {
+    --bg: var(--t-bg-d);
+    --card: #222029;
+    --text: #f2f0f7;
+    --sub: #a9a4b8;
+    --line: #36333f;
+    --main: var(--t-main-d);
+    --main-soft: var(--t-soft-d);
+    --accent: var(--t-accent);
     --over: #ff6b6b;
     --over-soft: #3d1f24;
     --soon: #ffb547;
     --soon-soft: #3a2c14;
     --ok: #4cc98c;
-    --on-main: #15111f;
+    --on-main: #16151b;
     --shadow: none;
   }
 }
@@ -87,7 +139,7 @@ main { padding: 4px 16px 16px; max-width: 640px; margin: 0 auto; }
 }
 .btn.sub { background: var(--main-soft); color: var(--main); }
 .btn.danger { background: transparent; color: var(--over); }
-.btn.pink { background: var(--accent); }
+.btn.pink { background: var(--accent); color: #fff; }
 .btn + .btn { margin-top: 8px; }
 .btn-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .btn-pair .btn { margin: 0; padding: 16px 8px; }
@@ -171,3 +223,12 @@ label.f > span { display: block; font-size: 13px; color: var(--sub); margin-bott
 .toast[hidden] { display: none; }
 .help { font-size: 13px; color: var(--sub); line-height: 1.7; }
 .help b { color: var(--text); }
+
+/* 設定：色えらび */
+.swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+.swatches button {
+  border: 2px solid transparent; background: var(--card); border-radius: 14px; padding: 8px 0 6px;
+  font-size: 12px; color: var(--sub);
+}
+.swatches button i { display: block; width: 34px; height: 34px; border-radius: 50%; margin: 0 auto 4px; }
+.swatches button.on { border-color: var(--main); color: var(--text); font-weight: 700; }

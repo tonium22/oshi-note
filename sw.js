@@ -1,5 +1,5 @@
 // オフラインでも開けるようにする。更新が反映されやすいよう「ネット優先 → ダメならキャッシュ」
-const CACHE = 'oshi-note-v1';
+const CACHE = 'oshi-note-v2';
 const FILES = ['./', 'index.html', 'style.css', 'calc.js', 'app.js', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {

@@ -217,4 +217,31 @@ t('読み取り：スクショ読み取り（OCR）の読み間違いがあっ�
   assert.deepStrictEqual(r.tags, ['ちいかわ']);
 });
 
+t('読み取り：iPhoneのテキスト認識で貼り付けたNARUTOのポップアップ告知', () => {
+  // トニーが実際に貼り付けた文章そのまま（日付が2行に分かれている）
+  const text = 'ぜひご来場ください！\n38\nNARUTO\nエピソード POP UP SHOP in エキマルア・ラ・モード\nJR京都駅菡口店\n2026.10.9FRI\n10.21WED.\n●平末史 スコット／塩気性・テレビ京・びえる';
+  const r = C.extractInfo(text, new Date(2026, 9, 1));
+  assert.deepStrictEqual(r.events.map((e) => [e.type, e.date, e.label, e.checked]), [
+    ['release', '2026-10-09', '開始', true],
+    ['release', '2026-10-21', '終了', false],
+  ]);
+  assert.strictEqual(r.title, 'NARUTO エピソード POP UP SHOP in エキマルア・ラ・モード');
+  assert.strictEqual(r.shop, 'エキマルア・ラ・モード JR京都駅菡口店');
+});
+
+t('読み取り：スクショOCRの「2026.10.9rr1 —> 10.27weo.」も期間として読む', () => {
+  const r = C.extractInfo('エピソード POP UP SHOP in エキラル\n2026.10.9rr1 —> 10.27weo.', new Date(2026, 9, 1));
+  assert.deepStrictEqual(r.events.map((e) => [e.type, e.date, e.label]), [['release', '2026-10-09', '開始'], ['release', '2026-10-27', '終了']]);
+});
+
+t('読み取り：もう過ぎた日付はチェックを外す', () => {
+  const r = C.extractInfo('POP UP SHOP\n2026.10.9FRI → 10.21WED.', now); // now = 10/27
+  assert.deepStrictEqual(r.events.map((e) => [e.date, e.checked, e.past]), [['2026-10-09', false, true], ['2026-10-21', false, true]]);
+});
+
+t('読み取り：終わりの日が始まりより前なら「読み間違いかも」', () => {
+  const r = C.extractInfo('POP UP SHOP\n2026.10.9rr1 —> 10.2 Twep.', new Date(2026, 9, 1));
+  assert.deepStrictEqual(r.events.map((e) => [e.date, !!e.suspect]), [['2026-10-09', false], ['2026-10-02', true]]);
+});
+
 console.log(`\n${passed} 件合格`);

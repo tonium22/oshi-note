@@ -254,7 +254,8 @@
       .replace(/[／]/g, '/').replace(/[：]/g, ':').replace(/[（]/g, '(').replace(/[）]/g, ')')
       .replace(/[～〜]/g, '~').replace(/[＃]/g, '#').replace(/[￥]/g, '¥').replace(/[，]/g, ',').replace(/[．]/g, '.')
       .replace(/　/g, ' ')
-      .replace(/#\s+(?=\S)/g, '#'); // OCRで「# ちいかわ」とスペースが入るのを直す
+      .replace(/#\s+(?=\S)/g, '#') // OCRで「# ちいかわ」とスペースが入るのを直す
+      .replace(/\s*(?:[—–ー\-]+>|→|⇒|➡|➔|≫|>>)\s*/g, ' ~ '); // 「10.9 → 10.21」の矢印も期間として扱う
   }
 
   // [種類, キーワード]。上から順に判定（「抽選受付」は抽選、「予約受付」は発売、など）
@@ -271,17 +272,18 @@
     'GU', 'ユニクロ', 'UNIQLO', 'サンリオ', '一番くじ', 'プレミアムバンダイ', 'プレバン', 'ムービック', 'グッドスマイル', 'あみあみ',
     '公式オンラインショップ', '公式通販', 'オンラインショップ', '通販', 'コラボカフェ', 'ガチャ', 'ゲームセンター', 'ゲーセン'];
 
-  const DATE_RE = /(?:(\d{4})\s*[年\/.\-]\s*)?(\d{1,2})\s*([月\/.])\s*(\d{1,2})\s*日?(\s*\(\s*[^()\s]{1,3}\s*\))?(?:\s*(\d{1,2})\s*(?::\s*(\d{2})|時\s*(?:(\d{1,2})\s*分?)?))?/g;
+  const DATE_RE = /(?:(\d{4})\s*[年\/.\-]\s*)?(\d{1,2})\s*([月\/.])\s*(\d{1,2})\s*日?(\s*\(\s*[^()\s]{1,3}\s*\)|\s*(?:SUN|MON|TUE|WED|THU|FRI|SAT)[A-Z]*\.?)?(?:\s*(\d{1,2})\s*(?::\s*(\d{2})|時\s*(?:(\d{1,2})\s*分?)?))?/gi;
   const PRICE_RE = /¥\s?(\d{1,3}(?:[,.]\d{3})+|\d{2,7})|(\d{1,3}(?:[,.]\d{3})+|\d{2,7})\s?円/;
 
   function findDates(line, now) {
     const out = [];
     DATE_RE.lastIndex = 0;
-    let m;
+    let m, hadYear = false;
     while ((m = DATE_RE.exec(line))) {
       const [all, y, mo, sep, d, week, h, mi1, mi2] = m;
-      // 「12.5cm」のような数字を日付と間違えないよう、「.」区切りは年か曜日がある時だけ
-      if (sep === '.' && !y && !week) continue;
+      // 「12.5cm」のような数字を日付と間違えないよう、「.」区切りは年か曜日がある時（または同じ行の前の日付に年がある時）だけ
+      if (sep === '.' && !y && !week && !hadYear) continue;
+      if (y) hadYear = true;
       const month = +mo, day = +d;
       if (month < 1 || month > 12 || day < 1 || day > 31) continue;
       let year = y ? +y : now.getFullYear();
@@ -308,9 +310,27 @@
     return m ? parseInt((m[1] || m[2]).replace(/[,.]/g, ''), 10) : null;
   }
 
+  // 日付だけの行か（「2026.10.9FRI」「10.21WED.」など）
+  function dateOnly(l, now) {
+    if (!findDates(l, now).length) return false;
+    DATE_RE.lastIndex = 0;
+    return l.replace(DATE_RE, '').replace(/[A-Za-z.\s~()]/g, '') === '';
+  }
+
+  // ステータスバー・コピーライト・数字だけの行など、タイトルや場所にしたくない行
+  const noiseLine = (l) => !l || /^#/.test(l) || /©|ⓒ|^●|^\(C\)/i.test(l) || /^[\d\s:.,%]+$/.test(l) || /^\d{1,2}:\d{2}\s/.test(l);
+
   function extractInfo(text, now) {
     const src = normText(text);
-    const lines = src.split(/\r?\n/).map((l) => l.trim());
+    const raw = src.split(/\r?\n/).map((l) => l.trim());
+    // 「2026.10.9FRI」「10.21WED.」のように開始日と終了日が別の行になっている時は1行にまとめる
+    const lines = [];
+    for (let i = 0; i < raw.length; i++) {
+      let j = i + 1;
+      while (j < raw.length && !raw[j]) j++;
+      if (raw[i] && j < raw.length && dateOnly(raw[i], now) && dateOnly(raw[j], now)) { lines.push(raw[i] + ' ~ ' + raw[j]); i = j; }
+      else lines.push(raw[i]);
+    }
     const tags = [];
     for (const m of src.matchAll(/#([^\s#,、。!?()「」【】]+)/g)) {
       if (!tags.some((t) => t.toLowerCase() === m[1].toLowerCase())) tags.push(m[1]);
@@ -324,15 +344,31 @@
       const m = /^[■●◆・◎★☆【\[]?\s*(?:販売場所|販売店舗|取扱店舗|取扱店|取り扱い店舗|会場|場所|販売方法)\s*[】\]]?\s*[:・\s]\s*(.+)$/.exec(l);
       if (m && m[1].trim() && !shops.includes(m[1].trim())) shops.unshift(m[1].trim().slice(0, 40));
     }
+    // 「POP UP SHOP in エキマルア・ラ・モード」の in の後ろと、「〇〇店」で終わる行
+    for (const l of lines) {
+      if (noiseLine(l) || findDates(l, now).length) continue;
+      const m = /\sin\s+(.+)$/i.exec(l);
+      const place = m && keywordType(l) ? m[1].trim() : /(店|百貨店|モール|ストア|ホール|アリーナ|ドーム|会館|館)$/.test(l) && l.length <= 30 ? l : '';
+      if (place && !shops.includes(place)) shops.push(place.slice(0, 40));
+    }
 
     // 値段
     const prices = [];
     for (const l of lines) { const p = findPrice(l); if (p != null) prices.push(p); }
 
     // タイトル：【】「」がある行を優先。なければ日付の無い最初の行
-    const cand = lines.filter((l) => l && !/^#/.test(l) && !findDates(l, now).length);
-    let title = cand.find((l) => /【.+】|「.+」/.test(l)) || cand.find((l) => l.replace(/#[^\s#]+/g, '').trim().length >= 4) || '';
-    title = title.replace(/#[^\s#]+/g, '').trim().slice(0, 40);
+    // 次に「発売」「POP UP」などの言葉がある行（すぐ上に「NARUTO」のような作品名があれば前に付ける）
+    const cand = lines.filter((l) => !noiseLine(l) && !findDates(l, now).length);
+    let title = cand.find((l) => /【.+】|「.+」/.test(l)) || '';
+    if (!title) {
+      const i = cand.findIndex((l) => keywordType(l));
+      if (i >= 0) {
+        title = cand[i];
+        const p = cand[i - 1];
+        if (p && /^[A-Z][A-Za-z !・ー\-]{2,15}$/.test(p) && !title.includes(p)) title = p + ' ' + title;
+      }
+    }
+    title = (title || cand.find((l) => l.replace(/#[^\s#]+/g, '').trim().length >= 4) || '').replace(/#[^\s#]+/g, '').trim().slice(0, 50);
 
     // 予定：日付がある行ごとに、その行（なければ1つ上の行）の言葉で種類を決める
     const events = [];
@@ -341,7 +377,7 @@
       if (!l) continue;
       const ds = findDates(l, now);
       if (!ds.length) { prev = l; continue; }
-      const type = keywordType(l) || keywordType(prev) || 'other';
+      const type = keywordType(l) || keywordType(prev) || keywordType(noTags) || 'other';
       const price = findPrice(l);
       const isRange = ds.length >= 2 && /~|-|から|まで/.test(l.slice(ds[0].end, ds[1].index));
       // 「11/3〜11/16 10:00〜20:00」は営業時間なので、開始日に10:00、終了日に20:00を付ける
@@ -356,15 +392,20 @@
         const checked = !isRange || (deadlineType ? isEnd : isStart);
         const label = isStart ? (deadlineType ? '受付開始' : '開始') : isEnd ? (deadlineType ? '締切' : '終了') : '';
         if (events.some((e) => e.date === d.date && e.time === d.time && e.type === type)) return;
-        events.push({ type, date: d.date, time: d.time, label, amount: price, checked, line: l });
+        // 終わりの日が始まりの日より前なら、ほぼ読み間違い（「10.21」を「10.2」と読んだ、など）
+        const suspect = isEnd && d.date < ds[0].date;
+        events.push({ type, date: d.date, time: d.time, label, amount: price, checked, line: l, suspect });
       });
       prev = l;
     }
     // 値段が1つしか書いてなければ、入金・発売の予定にその値段を入れる
     const single = prices.length && prices.every((p) => p === prices[0]) ? prices[0] : null;
     for (const e of events) if (e.amount == null) e.amount = single && ['pay', 'release'].includes(e.type) ? single : 0;
+    // もう過ぎた日付はチェックを外しておく
+    const todayKey = ymd(now);
+    for (const e of events) if (e.date < todayKey) { e.past = true; e.checked = false; }
 
-    return { title, tags, shops, shop: shops.join('・'), prices, events };
+    return { title, tags, shops, shop: shops.join(' '), prices, events };
   }
 
   // バックアップを読み込むときの形チェック

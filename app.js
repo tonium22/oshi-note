@@ -541,6 +541,7 @@
         <select class="c-type">${C.EVENT_TYPES.map((t) => `<option value="${t[0]}" ${t[0] === e.type ? 'selected' : ''}>${t[2]} ${t[1]}${t[0] === e.type && e.label ? '（' + e.label + '）' : ''}</option>`).join('')}</select></label>
       <div class="two" style="margin-top:6px"><input class="c-date" type="date" value="${e.date}"><input class="c-time" type="time" value="${e.time || ''}"></div>
       <div class="row" style="margin-top:6px"><input class="c-amount" inputmode="numeric" value="${e.amount || ''}" placeholder="金額（任意）" style="flex:1"></div>
+      ${e.suspect ? '<div class="over-text" style="font-size:13px;margin-top:4px">⚠️ 読み間違いかもしれません。画像と見比べてください</div>' : e.past ? '<div class="over-text" style="font-size:13px;margin-top:4px">この日付はもう過ぎています</div>' : ''}
       ${e.line ? `<div class="muted" style="margin-top:4px">元の文：${esc(e.line)}</div>` : ''}
     </div>`;
     openSheet('読み取り結果の確認', `

@@ -37,10 +37,10 @@
     return c.toDataURL('image/jpeg', quality || 0.8);
   }
 
-  // 小さい文字も読めるよう、横幅1600px前後に揃えてから読む
+  // 細い文字・小さい文字も読めるよう、横幅2400px前後まで大きくしてから読む（iPhoneのスクショだと約2倍）
   async function prepare(file) {
     const img = await loadImage(file);
-    const scale = Math.min(2, Math.max(1, 1600 / img.width));
+    const scale = Math.min(2.5, Math.max(1, 2400 / img.width));
     const c = document.createElement('canvas');
     c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
@@ -52,10 +52,22 @@
     const worker = await root.Tesseract.createWorker('jpn+eng', 1, {
       logger: (m) => { if (onProgress && m.status === 'recognizing text') onProgress(m.progress); },
     });
-    const { data } = await worker.recognize(await prepare(file));
+    const canvas = await prepare(file);
+    let text = clean((await worker.recognize(canvas)).data.text);
+    // 日付が1つも見つからない時は、文字がバラバラに置かれた画像向けの読み方でもう一度読む
+    const count = (t) => root.Calc.extractInfo(t, new Date()).events.length;
+    if (!count(text)) {
+      await worker.setParameters({ tessedit_pageseg_mode: '11' });
+      const text2 = clean((await worker.recognize(canvas)).data.text);
+      if (count(text2) > count(text)) text = text2;
+    }
     await worker.terminate();
-    // 日本語の文字の間に入る余計なスペースを消す
-    return data.text
+    return text;
+  }
+
+  // 日本語の文字の間に入る余計なスペースを消す
+  function clean(t) {
+    return t
       .replace(/([^\x00-\x7F])[ \t]+(?=[^\x00-\x7F])/g, '$1')
       .replace(/[ \t]+\n/g, '\n')
       .replace(/\n{3,}/g, '\n\n')

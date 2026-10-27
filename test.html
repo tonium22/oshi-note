@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>計算テスト</title>
+<style>body{font:15px/1.6 system-ui;padding:16px;background:#fff;color:#222}.ng{color:#c00}.ok{color:#080}</style></head>
+<body>
+<h1>計算テスト</h1>
+<pre id="out"></pre>
+<script src="calc.js"></script>
+<script>
+  // calc.test.js（Node用）をブラウザでも動かすための最小限の代役
+  const out = document.getElementById('out');
+  const log = (cls, s) => { const d = document.createElement('div'); d.className = cls; d.textContent = s; out.appendChild(d); };
+  console.log = (s) => log(String(s).startsWith('✓') ? 'ok' : '', s);
+  console.error = (s) => log('ng', s);
+  function A(v, msg) { if (!v) throw new Error(msg || 'assert failed'); }
+  A.ok = A;
+  A.strictEqual = (a, b) => { if (a !== b) throw new Error(JSON.stringify(a) + ' !== ' + JSON.stringify(b)); };
+  A.deepStrictEqual = (a, b) => A.strictEqual(JSON.stringify(a), JSON.stringify(b));
+  const Buffer = { byteLength: (s) => new TextEncoder().encode(s).length };
+  const process = {};
+  const require = (n) => (n === 'assert' ? A : self.Calc);
+</script>
+<script src="calc.test.js"></script>
+</body>
+</html>

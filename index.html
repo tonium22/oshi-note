@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#6a4bc4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="推し活ノート">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+  <title>推し活ノート</title>
+</head>
+<body>
+  <header class="top"><h1 id="title">推し活ノート</h1></header>
+  <main id="view"></main>
+  <nav class="tabs">
+    <a href="#/" data-tab="home"><span>🏠</span>ホーム</a>
+    <a href="#/events" data-tab="events"><span>📅</span>期限</a>
+    <a href="#/money" data-tab="money"><span>💴</span>お金</a>
+    <a href="#/settings" data-tab="settings"><span>⚙️</span>設定</a>
+  </nav>
+  <div id="sheet" class="sheet" hidden></div>
+  <div id="toast" class="toast" hidden></div>
+  <script src="calc.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

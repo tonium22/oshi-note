@@ -117,4 +117,104 @@ t('バックアップの形チェック', () => {
   assert.ok(!C.validBackup(null));
 });
 
+t('複数の予定を1つのカレンダーファイルにまとめる', () => {
+  const ics = C.buildICSMulti([{ id: 'a', type: 'pay', date: '2026-11-01' }, { id: 'b', type: 'release', date: '2026-11-03', time: '10:00', shop: 'アニメイト' }], now);
+  assert.strictEqual(ics.split('BEGIN:VEVENT').length - 1, 2);
+  assert.strictEqual(ics.split('BEGIN:VCALENDAR').length - 1, 1);
+  assert.ok(ics.replace(/\r\n /g, '').includes('販売場所: アニメイト'));
+});
+
+t('これから必要なお金：月ごとの累計', () => {
+  const r = C.neededMoney([
+    { date: '2026-11-15', amount: 9800 },
+    { date: '2026-11-03', amount: 1980 },
+    { date: '2026-12-01', amount: 5000 },
+    { date: '2026-11-20', amount: 3000, done: true }, // 完了は入らない
+    { date: '2026-11-21', amount: 0 }, // 金額なしは入らない
+  ], now);
+  assert.strictEqual(r.total, 16780);
+  assert.deepStrictEqual(r.byMonth, [{ key: '2026-11', sum: 11780, cum: 11780 }, { key: '2026-12', sum: 5000, cum: 16780 }]);
+});
+
+t('タグの入力：# あり・なし・全角・重複', () => {
+  assert.deepStrictEqual(C.parseTags('#ナルト ＃ＮＡＲＵＴＯ、ナルト naruto'), ['ナルト', 'NARUTO']);
+});
+
+t('昔の推し（文字だけ）を新しい形に直す', () => {
+  assert.deepStrictEqual(C.normalizeOshis(['ちいかわ', { name: 'ナルト', tags: ['NARUTO'] }]), [{ name: 'ちいかわ', tags: ['ちいかわ'] }, { name: 'ナルト', tags: ['NARUTO'] }]);
+});
+
+t('検索：#ちいかわ で、推し・タグ・本文どれでもヒット', () => {
+  const oshis = [{ name: 'ちいかわ', tags: ['ちいかわ', 'chiikawa'] }];
+  assert.ok(C.matchRecord({ title: 'ぬいぐるみ', oshi: 'ちいかわ' }, '#ちいかわ', oshis));
+  assert.ok(C.matchRecord({ title: 'ぬいぐるみ', tags: ['chiikawa'] }, 'ちいかわ', oshis));
+  assert.ok(C.matchRecord({ title: 'ちいかわ ポップアップ' }, '＃ちいかわ', oshis));
+  assert.ok(!C.matchRecord({ title: 'ナルト 一番くじ' }, '#ちいかわ', oshis));
+  assert.ok(C.matchRecord({ title: 'x' }, '', oshis)); // 空なら全部
+});
+
+t('検索：次の発売日が分かる', () => {
+  const st = { oshis: ['ちいかわ'], expenses: [{ date: '2026-10-01', amount: 1500, oshi: 'ちいかわ' }], events: [
+    { id: '1', type: 'release', title: '旧グッズ', oshi: 'ちいかわ', date: '2026-09-01', done: true },
+    { id: '2', type: 'release', title: 'マスコット', oshi: 'ちいかわ', date: '2026-11-10' },
+    { id: '3', type: 'release', title: 'ぬいぐるみ', oshi: 'ちいかわ', date: '2026-11-03' },
+    { id: '4', type: 'release', title: 'ナルト', oshi: 'ナルト', date: '2026-11-01' },
+  ] };
+  const r = C.searchAll(st, '#ちいかわ', now);
+  assert.strictEqual(r.nextRelease.title, 'ぬいぐるみ');
+  assert.deepStrictEqual(r.upcoming.map((e) => e.id), ['3', '2']);
+  assert.deepStrictEqual(r.past.map((e) => e.id), ['1']);
+  assert.strictEqual(r.expenseTotal, 1500);
+});
+
+t('読み取り：ポップアップの告知文', () => {
+  const r = C.extractInfo([
+    '【ちいかわ】ポップアップストア開催決定！',
+    '11/3(火)〜11/16(月) 10:00〜20:00',
+    '会場：〇〇百貨店 7F',
+    'ぬいぐるみ １，９８０円(税込)',
+    '#ちいかわ #ちいかわらんど',
+  ].join('\n'), now);
+  assert.strictEqual(r.title, '【ちいかわ】ポップアップストア開催決定!'.replace('!', '！'));
+  assert.deepStrictEqual(r.tags, ['ちいかわ', 'ちいかわらんど']);
+  assert.strictEqual(r.shop, '〇〇百貨店 7F'); // ハッシュタグの中の店名は拾わない
+  assert.deepStrictEqual(r.events.map((e) => [e.type, e.date, e.time, e.label, e.checked, e.amount]), [
+    ['release', '2026-11-03', '10:00', '開始', true, 1980],
+    ['release', '2026-11-16', '20:00', '終了', false, 1980],
+  ]);
+});
+
+t('読み取り：チケットの抽選・当落・入金', () => {
+  const r = C.extractInfo([
+    'NARUTO ライブイベント',
+    'FC先行抽選受付：2026年11月1日(日)12:00〜11月8日(日)23:59',
+    '当落発表：11月12日(木)18:00',
+    '入金期間：11月12日(木)18:00〜11月15日(日)23:59',
+    'チケット代 9,800円',
+    '#ナルト #NARUTO',
+  ].join('\n'), now);
+  assert.deepStrictEqual(r.events.map((e) => [e.type, e.date, e.time, e.label, e.checked, e.amount]), [
+    ['lottery', '2026-11-01', '12:00', '受付開始', false, 0],
+    ['lottery', '2026-11-08', '23:59', '締切', true, 0],
+    ['result', '2026-11-12', '18:00', '', true, 0],
+    ['pay', '2026-11-12', '18:00', '受付開始', false, 9800],
+    ['pay', '2026-11-15', '23:59', '締切', true, 9800],
+  ]);
+  assert.strictEqual(r.title, 'NARUTO ライブイベント');
+});
+
+t('読み取り：見出しの次の行に日付 / 年またぎ / 12.5cm は日付にしない', () => {
+  const r = C.extractInfo('■予約締切\n1月10日(土)23:59まで\nサイズ 約12.5cm\n価格 ¥2,200', now);
+  assert.deepStrictEqual(r.events.map((e) => [e.type, e.date, e.time]), [['release', '2027-01-10', '23:59']]);
+  assert.strictEqual(r.events[0].amount, 2200);
+});
+
+t('読み取り：スクショ読み取り（OCR）の読み間違いがあっても拾える', () => {
+  // 実際に無料OCRで読んだ結果そのまま
+  const r = C.extractInfo('【ちいかわ】ポップアップストア開催 !\n11/3(X)~11/16(H) 10:00~20:00\n会場・大阪百貨店 7F\n\nぬいぐるみ 1.980 円 (税込 )\n\n# ちいかわ', now);
+  assert.deepStrictEqual(r.events.map((e) => [e.date, e.time, e.amount]), [['2026-11-03', '10:00', 1980], ['2026-11-16', '20:00', 1980]]);
+  assert.strictEqual(r.shop, '大阪百貨店 7F');
+  assert.deepStrictEqual(r.tags, ['ちいかわ']);
+});
+
 console.log(`\n${passed} 件合格`);

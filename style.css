@@ -1,36 +1,36 @@
 /* 色：テーマ（推しカラー）× 明るさ（明るい / 暗い / iPhoneに合わせる）。
    テーマは --t-* を決めるだけ。実際に使う色は下の明るい・暗いの指定で選ぶ */
 :root, [data-theme="purple"] {
-  --t-main: #6a4bc4; --t-soft: #ece6fb; --t-bg: #f6f3fc; --t-line: #e4ddf2; --t-accent: #e0457b; --t-on: #fff;
-  --t-main-d: #a48cf0; --t-soft-d: #322d46; --t-bg-d: #1d1b26;
+  --t-main: #6a4bc4; --t-soft: #ded7f2; --t-bg: #ece8f7; --t-line: #d2c9ed; --t-accent: #e0457b; --t-on: #fff;
+  --t-main-d: #a48cf0; --t-soft-d: #352f4a; --t-bg-d: #242130;
 }
 [data-theme="pink"] {
-  --t-main: #d6336c; --t-soft: #fde4ee; --t-bg: #fff4f8; --t-line: #f6d6e3; --t-accent: #7b5ce0; --t-on: #fff;
-  --t-main-d: #ff7fab; --t-soft-d: #452a38; --t-bg-d: #221a22;
+  --t-main: #d6336c; --t-soft: #f6d2df; --t-bg: #fae4ec; --t-line: #f3c2d3; --t-accent: #7b5ce0; --t-on: #fff;
+  --t-main-d: #ff7fab; --t-soft-d: #492c3b; --t-bg-d: #2d2029;
 }
 [data-theme="red"] {
-  --t-main: #d62839; --t-soft: #fde2e4; --t-bg: #fff5f5; --t-line: #f5d5d8; --t-accent: #e8590c; --t-on: #fff;
-  --t-main-d: #ff7b86; --t-soft-d: #452930; --t-bg-d: #221a20;
+  --t-main: #d62839; --t-soft: #f6d0d3; --t-bg: #fae3e5; --t-line: #f3bec4; --t-accent: #e8590c; --t-on: #fff;
+  --t-main-d: #ff7b86; --t-soft-d: #492b33; --t-bg-d: #2d1f26;
 }
 [data-theme="orange"] {
-  --t-main: #e8590c; --t-soft: #ffe8d6; --t-bg: #fff8f1; --t-line: #f5dcc8; --t-accent: #d6336c; --t-on: #fff;
-  --t-main-d: #ffa060; --t-soft-d: #453129; --t-bg-d: #221c1e;
+  --t-main: #e8590c; --t-soft: #fadaca; --t-bg: #fce9df; --t-line: #f8cdb6; --t-accent: #d6336c; --t-on: #fff;
+  --t-main-d: #ffa060; --t-soft-d: #49342a; --t-bg-d: #2d2322;
 }
 [data-theme="yellow"] {
-  --t-main: #e0a800; --t-soft: #fff3c4; --t-bg: #fffcef; --t-line: #f1e3b0; --t-accent: #e8590c; --t-on: #3a2a00;
-  --t-main-d: #ffd43b; --t-soft-d: #453b21; --t-bg-d: #221f1d;
+  --t-main: #e0a800; --t-soft: #f8ecc7; --t-bg: #fbf4de; --t-line: #f6e5b2; --t-accent: #e8590c; --t-on: #3a2a00;
+  --t-main-d: #ffd43b; --t-soft-d: #493f22; --t-bg-d: #2d281e;
 }
 [data-theme="green"] {
-  --t-main: #2b9348; --t-soft: #dff3e4; --t-bg: #f4fbf5; --t-line: #d2ead8; --t-accent: #e0457b; --t-on: #fff;
-  --t-main-d: #6fd38a; --t-soft-d: #283b31; --t-bg-d: #1a1e21;
+  --t-main: #2b9348; --t-soft: #d0e7d7; --t-bg: #e3f1e7; --t-line: #bfdfc8; --t-accent: #e0457b; --t-on: #fff;
+  --t-main-d: #6fd38a; --t-soft-d: #2a3f33; --t-bg-d: #1f2826;
 }
 [data-theme="sky"] {
-  --t-main: #1c9fd6; --t-soft: #dcf2fc; --t-bg: #f3fbff; --t-line: #cfe8f3; --t-accent: #e0457b; --t-on: #fff;
-  --t-main-d: #6cc8f0; --t-soft-d: #273946; --t-bg-d: #1a1e26;
+  --t-main: #1c9fd6; --t-soft: #cdeaf6; --t-bg: #e1f3fa; --t-line: #bbe2f3; --t-accent: #e0457b; --t-on: #fff;
+  --t-main-d: #6cc8f0; --t-soft-d: #293c4a; --t-bg-d: #1f2730;
 }
 [data-theme="blue"] {
-  --t-main: #2f5bd3; --t-soft: #e1e8fc; --t-bg: #f4f7ff; --t-line: #d6def3; --t-accent: #e0457b; --t-on: #fff;
-  --t-main-d: #8aa6ff; --t-soft-d: #2d3249; --t-bg-d: #1c1c26;
+  --t-main: #2f5bd3; --t-soft: #d1dbf5; --t-bg: #e4eaf9; --t-line: #c1cef2; --t-accent: #e0457b; --t-on: #fff;
+  --t-main-d: #8aa6ff; --t-soft-d: #30354d; --t-bg-d: #222432;
 }
 
 :root {
@@ -232,3 +232,32 @@ label.f > span { display: block; font-size: 13px; color: var(--sub); margin-bott
 }
 .swatches button i { display: block; width: 34px; height: 34px; border-radius: 50%; margin: 0 auto 4px; }
 .swatches button.on { border-color: var(--main); color: var(--text); font-weight: 700; }
+
+/* 検索 */
+.search-box input {
+  width: 100%; border: 1px solid var(--line); background: var(--card); border-radius: 14px;
+  padding: 13px 14px; font-size: 16px; margin-bottom: 10px; -webkit-appearance: none;
+}
+.card.hl { border: 2px solid var(--main); }
+
+/* 読み取り */
+.or { text-align: center; color: var(--sub); font-size: 13px; margin: 14px 0 6px; }
+.cand { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; margin-bottom: 8px; }
+.cand select, .cand input[type=date], .cand input[type=time], .cand .c-amount {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 8px; font-size: 16px; width: 100%; min-width: 0;
+}
+.cand select { flex: 1; }
+.src { margin-top: 12px; }
+.src summary { color: var(--main); font-weight: 600; font-size: 14px; cursor: pointer; }
+.src pre { white-space: pre-wrap; font: 13px/1.6 inherit; color: var(--sub); background: var(--card); padding: 10px; border-radius: 12px; }
+
+/* 背景の画像 */
+#bg { position: fixed; inset: 0; z-index: -1; background-size: cover; background-position: center; display: none; }
+#bg::after { content: ""; position: absolute; inset: 0; background: var(--bg); opacity: var(--veil, .45); }
+.has-bg #bg { display: block; }
+.has-bg body { background: transparent; }
+.has-bg .top { background: transparent; }
+.has-bg .top h1 { display: inline-block; background: var(--card); padding: 2px 14px; border-radius: 99px; box-shadow: var(--shadow); }
+.has-bg .seg, .has-bg .month-nav b { background: var(--card); }
+.has-bg .month-nav b { padding: 6px 14px; border-radius: 12px; }
+.bg-thumb { height: 140px; border-radius: 14px; background-size: cover; background-position: center; margin-bottom: 10px; }

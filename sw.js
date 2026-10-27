@@ -1,6 +1,6 @@
 // オフラインでも開けるようにする。更新が反映されやすいよう「ネット優先 → ダメならキャッシュ」
-const CACHE = 'oshi-note-v2';
-const FILES = ['./', 'index.html', 'style.css', 'calc.js', 'app.js', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
+const CACHE = 'oshi-note-v4';
+const FILES = ['./', 'index.html', 'style.css', 'calc.js', 'ocr.js', 'app.js', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -13,7 +13,8 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request)
+    // GitHub Pagesは10分間ファイルを使い回させる設定なので、毎回「新しいのある？」と確認しに行く
+    fetch(e.request, { cache: 'no-cache' })
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));

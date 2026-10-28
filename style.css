@@ -202,7 +202,9 @@ label.f > span { display: block; font-size: 13px; color: var(--sub); margin-bott
 }
 .f textarea { min-height: 70px; resize: vertical; }
 .f input.yen { font-size: 26px; font-weight: 800; }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+/* iPhoneの日付・時刻の入力欄は勝手に幅を広げて枠からはみ出すので、枠に合わせる */
+input[type=date], input[type=time] { -webkit-appearance: none; appearance: none; min-width: 0; width: 100%; display: block; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chips button {
@@ -261,3 +263,32 @@ label.f > span { display: block; font-size: 13px; color: var(--sub); margin-bott
 .has-bg .seg, .has-bg .month-nav b { background: var(--card); }
 .has-bg .month-nav b { padding: 6px 14px; border-radius: 12px; }
 .bg-thumb { height: 140px; border-radius: 14px; background-size: cover; background-position: center; margin-bottom: 10px; }
+
+/* 写真 */
+.item .thumb { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex: none; background: var(--main-soft); }
+.photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 4px 0 14px; }
+.photos img, .photos .add-photo { width: 100%; aspect-ratio: 1; border-radius: 12px; object-fit: cover; background: var(--main-soft); }
+.photos .add-photo { border: 2px dashed var(--line); color: var(--main); font-weight: 700; font-size: 13px; line-height: 1.6; }
+.viewer { display: block; width: 100%; max-height: 65vh; object-fit: contain; border-radius: 14px; margin-bottom: 12px; background: var(--card); }
+
+/* カレンダー */
+.cal-head, .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-head span { text-align: center; font-size: 12px; color: var(--sub); padding-bottom: 4px; }
+.cal-head span:first-child { color: var(--over); }
+.cal-head span:last-child { color: var(--main); }
+.day {
+  position: relative; aspect-ratio: 1 / 1.15; border: 1px solid transparent; border-radius: 10px;
+  background: var(--bg); overflow: hidden; padding: 0; color: var(--text);
+}
+.day img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .6; }
+.day .n { position: absolute; top: 3px; left: 5px; font-size: 13px; font-weight: 700; }
+.day img + .n { background: var(--card); border-radius: 6px; padding: 0 4px; left: 3px; }
+.day.sun .n { color: var(--over); }
+.day.sat .n { color: var(--main); }
+.day.today { border-color: var(--main); }
+.day.sel { border: 2px solid var(--main); background: var(--main-soft); }
+.day .dots { position: absolute; left: 0; right: 0; bottom: 4px; display: flex; justify-content: center; gap: 2px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--main); box-shadow: 0 0 0 1px var(--card); }
+.dot.over { background: var(--over); }
+.dot.today, .dot.soon { background: var(--soon); }
+.dot.done { background: var(--sub); opacity: .6; }

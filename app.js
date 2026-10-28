@@ -9,6 +9,8 @@
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const today = () => C.ymd(new Date());
   const monthName = (key) => { const [y, m] = key.split('-'); return y + '年' + Number(m) + '月'; };
+  // 写真を画面に入れる（古いindex.htmlが残っていてphotos.jsが無い時でも止まらないように）
+  const hydrate = (el) => { if (self.Photos) self.Photos.hydrate(el); };
   const tagText = (tags) => (tags || []).map((t) => '#' + t).join(' ');
 
   // ---------- 見た目（色・明るさ・背景画像） ----------
@@ -53,7 +55,10 @@
   // ---------- データ ----------
   const defaults = () => ({ events: [], expenses: [], oshis: [], budget: 0, lastOshi: '' });
   let state = load();
-  let eventsTab = 'open';
+  let eventsTab = 'cal';
+  let calMonth = C.monthKey(today());
+  let selDay = today();
+  let pendingShot = null; // 読み取りに使ったスクショ（登録時に写真として付ける）
   let moneyMonth = C.monthKey(today());
   let searchQ = '';
 
@@ -127,7 +132,7 @@
     const t = C.typeInfo(ev.type);
     const u = C.urgency(ev, now);
     return `<li class="item ${ev.done ? 'done' : ''}" data-act="event" data-id="${ev.id}">
-      <div class="emoji">${t[2]}</div>
+      ${(ev.photos || []).length ? `<img class="thumb" data-photo="${ev.photos[0]}" alt="">` : `<div class="emoji">${t[2]}</div>`}
       <div class="main"><div class="ttl">${esc(ev.title || t[1])}</div>
         <div class="muted">${t[1]}・${C.dateLabel(ev)}${ev.oshi ? '・' + esc(ev.oshi) : ''}</div>
         ${ev.shop ? `<div class="muted">📍${esc(ev.shop)}</div>` : ''}</div>
@@ -179,11 +184,13 @@
         const open = C.sortEvents(state.events.filter((e) => !e.done));
         const done = C.sortEvents(state.events.filter((e) => e.done)).reverse();
         const list = eventsTab === 'open' ? open : done;
-        return `
-          <div class="seg">
+        const seg = `<div class="seg">
+            <button data-act="events-tab" data-tab="cal" class="${eventsTab === 'cal' ? 'on' : ''}">カレンダー</button>
             <button data-act="events-tab" data-tab="open" class="${eventsTab === 'open' ? 'on' : ''}">これから ${open.length}</button>
             <button data-act="events-tab" data-tab="done" class="${eventsTab === 'done' ? 'on' : ''}">完了 ${done.length}</button>
-          </div>
+          </div>`;
+        if (eventsTab === 'cal') return seg + calendarHtml(now);
+        return `${seg}
           <div class="btn-pair">
             <button class="btn" data-act="new-event">＋ 期限を登録</button>
             <button class="btn sub" data-act="import">📷 読み取る</button>
@@ -263,7 +270,7 @@
             <button class="btn" data-act="save-budget">予算を保存</button>
           </div>
           <div class="card"><h2>バックアップ</h2>
-            <p class="help">データは<b>このiPhoneの中だけ</b>に保存しています。Safariの履歴やWebサイトデータを消すと<b>すべて消えてしまう</b>ので、ときどきバックアップしてください。</p>
+            <p class="help">データと写真は<b>このiPhoneの中だけ</b>に保存しています。Safariの履歴やWebサイトデータを消すと<b>すべて消えてしまう</b>ので、ときどきバックアップしてください。</p>
             <button class="btn sub" data-act="export">バックアップを保存（ファイル）</button>
             <button class="btn sub" data-act="import-backup">バックアップから戻す</button>
             <input id="import-file" type="file" accept="application/json,.json" hidden>
@@ -279,6 +286,44 @@
       },
     },
   };
+
+  // 月のカレンダー。日にちをタップすると、その日の予定（写真つき）が下に出る
+  function calendarHtml(now) {
+    const [y, m] = calMonth.split('-').map(Number);
+    const startW = new Date(y, m - 1, 1).getDay();
+    const days = new Date(y, m, 0).getDate();
+    const byDay = {};
+    for (const e of state.events) if (C.monthKey(e.date) === calMonth) (byDay[e.date] = byDay[e.date] || []).push(e);
+    const todayKey = today();
+    let cells = '';
+    for (let i = 0; i < startW; i++) cells += '<span></span>';
+    for (let d = 1; d <= days; d++) {
+      const key = calMonth + '-' + String(d).padStart(2, '0');
+      const evs = C.sortEvents(byDay[key] || []);
+      const withPhoto = evs.find((e) => (e.photos || []).length);
+      const w = (startW + d - 1) % 7;
+      cells += `<button class="day ${key === todayKey ? 'today' : ''} ${key === selDay ? 'sel' : ''} ${w === 0 ? 'sun' : w === 6 ? 'sat' : ''}" data-act="day" data-v="${key}">
+        ${withPhoto ? `<img data-photo="${withPhoto.photos[0]}" alt="">` : ''}
+        <span class="n">${d}</span>
+        <span class="dots">${evs.slice(0, 4).map((e) => `<i class="dot ${C.urgency(e, now)}"></i>`).join('')}</span></button>`;
+    }
+    const sel = C.sortEvents(state.events.filter((e) => e.date === selDay));
+    const selLabel = C.dateLabel({ date: selDay });
+    return `
+      <div class="month-nav">
+        <button data-act="cal-month" data-d="-1" aria-label="前の月">‹</button>
+        <b>${monthName(calMonth)}</b>
+        <button data-act="cal-month" data-d="1" aria-label="次の月">›</button>
+      </div>
+      <div class="card" style="padding:10px">
+        <div class="cal-head">${['日', '月', '火', '水', '木', '金', '土'].map((d) => `<span>${d}</span>`).join('')}</div>
+        <div class="cal">${cells}</div>
+      </div>
+      <div class="card"><h2>${selLabel}の予定</h2>
+        ${sel.length ? `<ul class="list">${sel.map((e) => eventRow(e, now)).join('')}</ul>` : '<div class="empty" style="padding:10px 0">予定はありません</div>'}
+        <button class="btn sub" data-act="new-event" data-date="${selDay}" style="margin-top:8px">＋ この日に登録</button>
+      </div>`;
+  }
 
   function searchResults() {
     const now = new Date();
@@ -305,6 +350,7 @@
     document.querySelectorAll('.tabs a').forEach((a) => a.classList.toggle('on', a.dataset.tab === key));
     $('#title').textContent = VIEWS[key].title;
     $('#view').innerHTML = VIEWS[key].html();
+    hydrate($('#view'));
   }
 
   // ---------- 下から出る入力画面 ----------
@@ -313,6 +359,7 @@
     sh.innerHTML = `<div class="panel" role="dialog" aria-label="${esc(title)}">
       <div class="panel-head"><h3>${esc(title)}</h3><button class="x" data-close aria-label="閉じる">✕</button></div>${html}</div>`;
     sh.hidden = false;
+    hydrate(sh);
     sh.onclick = (e) => {
       if (e.target === sh || e.target.closest('[data-close]')) return closeSheet();
       const el = e.target.closest('[data-sact]');
@@ -371,7 +418,7 @@
       }
       if (act === 'delete' && confirm('この予定を削除しますか？')) {
         state.events = state.events.filter((x) => x.id !== ev.id);
-        save(); closeSheet(); render(); toast('削除しました');
+        save(); closeSheet(); render(); cleanupPhotos(); toast('削除しました');
       }
     });
   }
@@ -397,6 +444,9 @@
         ${(ev.tags || []).length ? `<div class="chips" style="justify-content:center;margin-top:8px">${ev.tags.map((g) => `<button data-sact="tag" data-v="${esc(g)}">#${esc(g)}</button>`).join('')}</div>` : ''}
         ${ev.memo ? `<p class="help" style="white-space:pre-wrap">${esc(ev.memo)}</p>` : ''}
       </div>
+      <div class="photos">${(ev.photos || []).map((id) => `<img data-photo="${id}" data-sact="photo" data-v="${id}" alt="写真">`).join('')}
+        <button class="add-photo" data-sact="add-photo">📷<br>写真を追加</button></div>
+      <input id="ev-photo" type="file" accept="image/*" multiple hidden>
       ${ev.done ? '' : `<button class="btn" data-sact="cal">📅 iPhoneのカレンダーにアラームを入れる</button>
         ${ev.calAdded ? '<p class="muted" style="text-align:center;margin:4px 0 0">カレンダーに送信済みです（2回入れると重複します）</p>' : ''}`}
       <div style="height:8px"></div>
@@ -405,6 +455,8 @@
       ${ev.source ? `<details class="src"><summary>読み取った元の文章</summary><pre>${esc(ev.source)}</pre></details>` : ''}`,
     (act, el) => {
       if (act === 'cal') { addToCalendar([ev]); ev.calAdded = true; save(); }
+      if (act === 'add-photo') $('#ev-photo').click();
+      if (act === 'photo') photoViewer(el.dataset.v, ev);
       if (act === 'edit') eventForm(ev);
       if (act === 'tag') { closeSheet(); searchQ = '#' + el.dataset.v; location.hash = '#/search'; render(); }
       if (act === 'undone') { ev.done = false; save(); render(); eventDetail(ev); }
@@ -425,6 +477,44 @@
         state.expenses.push({ id: uid(), date: today(), amount: ev.amount, cat, oshi: ev.oshi, memo: ev.title, tags: ev.tags || [], fromEvent: ev.id });
         save(); render(); closeSheet();
         toast('完了にして、出費に ' + C.yen(ev.amount) + ' を記録しました');
+      }
+    });
+    $('#ev-photo').onchange = async (e) => {
+      const files = [...e.target.files];
+      if (!files.length) return;
+      toast('写真を保存しています…');
+      try {
+        for (const f of files) ev.photos = (ev.photos || []).concat(await savePhoto(f));
+        save(); render(); eventDetail(ev); toast('写真を追加しました');
+      } catch (err) { toast(err.message || '写真を保存できませんでした'); }
+    };
+  }
+
+  // 写真は長い辺1200pxのJPEGに縮めて保存（1枚あたり200KB前後）
+  async function savePhoto(file) {
+    const data = await self.OCR.shrink(file, 1200, 0.8);
+    const id = 'p' + uid();
+    await self.Photos.put(id, data);
+    return id;
+  }
+
+  // どの予定からも使われていない写真を消す
+  async function cleanupPhotos() {
+    const used = new Set();
+    for (const e of state.events) for (const id of e.photos || []) used.add(id);
+    try { for (const id of await self.Photos.keys()) if (!used.has(id)) await self.Photos.del(id); } catch (e) { /* 次の機会に */ }
+  }
+
+  function photoViewer(id, ev) {
+    openSheet('写真', `
+      <img class="viewer" data-photo="${id}" alt="写真">
+      <button class="btn sub" data-sact="back">戻る</button>
+      <button class="btn danger" data-sact="delete">この写真を削除</button>`,
+    async (act) => {
+      if (act === 'back') eventDetail(ev);
+      if (act === 'delete' && confirm('この写真を削除しますか？')) {
+        ev.photos = (ev.photos || []).filter((x) => x !== id);
+        save(); await cleanupPhotos(); render(); eventDetail(ev); toast('写真を削除しました');
       }
     });
   }
@@ -512,6 +602,7 @@
       if (act === 'read-text') {
         const text = $('#imp-text', sh).value.trim();
         if (!text) return toast('文章を貼り付けてください');
+        pendingShot = null;
         importReview(text);
       }
     });
@@ -521,6 +612,7 @@
       const prog = $('#imp-progress');
       prog.hidden = false;
       prog.textContent = '準備しています…';
+      pendingShot = file;
       try {
         const text = await self.OCR.readImage(file, (p) => { prog.textContent = '読み取り中… ' + Math.round(p * 100) + '%'; });
         if (!text) { prog.textContent = '文字が見つかりませんでした。文章の貼り付けを試してください'; return; }
@@ -553,12 +645,21 @@
       <h4 style="margin:14px 0 6px">見つかった日付（${rows.length}件）</h4>
       <div id="cands">${rows.length ? rows.map(rowHtml).join('') : '<div class="empty" style="padding:8px">日付が見つかりませんでした。下のボタンで追加できます</div>'}</div>
       <button class="btn sub" data-sact="add-row" style="margin-bottom:12px">＋ 日付を手で追加</button>
+      <label class="f"><span>写真（任意）</span>
+        <div class="row" style="gap:10px">${pendingShot ? '<span class="badge">📷 読み取ったスクショを付けます</span>' : ''}
+          <button type="button" class="btn sub" style="width:auto;padding:10px 14px" data-sact="pick-shot">${pendingShot ? '別の写真にする' : '📷 写真を付ける'}</button></div></label>
+      <input id="r-photo" type="file" accept="image/*" hidden>
       <button class="btn" data-sact="save">チェックした予定を登録</button>
       <details class="src"><summary>読み取った文章（直して読み直せます）</summary>
         <textarea id="r-text" style="width:100%;min-height:140px;margin-top:8px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--card)">${esc(text)}</textarea>
         <button class="btn sub" data-sact="reread" style="margin-top:8px">この文章で読み直す</button></details>`,
-    (act, el, sh) => {
+    async (act, el, sh) => {
       if (act === 'reread') return importReview($('#r-text', sh).value);
+      if (act === 'pick-shot') {
+        const inp = $('#r-photo', sh);
+        inp.onchange = () => { if (inp.files[0]) { pendingShot = inp.files[0]; el.textContent = '別の写真にする'; toast('写真を付けます'); } };
+        inp.click();
+      }
       if (act === 'add-row') {
         const box = $('#cands', sh);
         if (!box.querySelector('.cand')) box.innerHTML = '';
@@ -584,6 +685,11 @@
           });
         }
         if (!added.length) return toast('登録する予定にチェックを入れてください');
+        if (pendingShot) {
+          try { const pid = await savePhoto(pendingShot); added.forEach((e) => { e.photos = [pid]; }); }
+          catch (err) { toast('写真は保存できませんでした（予定は登録します）'); }
+          pendingShot = null;
+        }
         state.events.push(...added);
         rememberOshi(oshiName);
         save(); render();
@@ -632,8 +738,11 @@
       try { d = JSON.parse(r.result); } catch (e) { return toast('このファイルは読み込めませんでした'); }
       if (!C.validBackup(d)) return toast('推し活ノートのバックアップではないようです');
       if (!confirm(`予定${d.events.length}件・出費${d.expenses.length}件で、今のデータを上書きしますか？`)) return;
+      const photos = d.photos || {};
+      delete d.photos;
       state = migrate(Object.assign(defaults(), d));
-      save(); render(); toast('バックアップから戻しました');
+      save();
+      Promise.all(Object.entries(photos).map(([id, v]) => self.Photos.put(id, v))).catch(() => toast('一部の写真を戻せませんでした')).then(() => { render(); toast('バックアップから戻しました'); });
     };
     r.readAsText(file);
   }
@@ -644,12 +753,18 @@
     if (!el || el.closest('#sheet')) return;
     const act = el.dataset.act;
     const find = (arr) => arr.find((x) => x.id === el.dataset.id);
-    if (act === 'new-event') eventForm();
+    if (act === 'new-event') eventForm(null, el.dataset.date ? { date: el.dataset.date } : null);
     else if (act === 'new-expense') expenseForm();
     else if (act === 'import') importSheet();
     else if (act === 'event') { const ev = find(state.events); if (ev) eventDetail(ev); }
     else if (act === 'expense') { const ex = find(state.expenses); if (ex) expenseForm(ex); }
     else if (act === 'events-tab') { eventsTab = el.dataset.tab; render(); }
+    else if (act === 'day') { selDay = el.dataset.v; render(); }
+    else if (act === 'cal-month') {
+      calMonth = C.shiftMonth(calMonth, Number(el.dataset.d));
+      selDay = calMonth === C.monthKey(today()) ? today() : calMonth + '-01';
+      render();
+    }
     else if (act === 'search-tag') { searchQ = '#' + el.dataset.v; render(); }
     else if (act === 'month') { moneyMonth = C.shiftMonth(moneyMonth, Number(el.dataset.d)); render(); }
     else if (act === 'theme') { setLook({ theme: el.dataset.v }); render(); }
@@ -664,8 +779,10 @@
       if (n == null) return toast('予算は数字で入力してください');
       state.budget = n; save(); render(); toast(n ? '予算を ' + C.yen(n) + ' にしました' : '予算なしにしました');
     } else if (act === 'export') {
-      download(new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' }), 'oshi-note-backup-' + today() + '.json');
-      toast('バックアップを保存しました（「ファイル」アプリに入ります）');
+      self.Photos.all().catch(() => ({})).then((photos) => {
+        download(new Blob([JSON.stringify(Object.assign({}, state, { photos }))], { type: 'application/json' }), 'oshi-note-backup-' + today() + '.json');
+        toast('バックアップを保存しました（写真も入っています）');
+      });
     } else if (act === 'import-backup') $('#import-file').click();
   });
 
@@ -683,6 +800,7 @@
     if (e.target.id === 'q') {
       searchQ = e.target.value;
       $('#search-results').innerHTML = searchResults();
+      hydrate($('#search-results'));
     }
     if (e.target.id === 'bg-strength') {
       const v = Number(e.target.value);
